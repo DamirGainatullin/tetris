@@ -3,51 +3,16 @@ import sys
 import random
 import pygame
 
-shapes_type = {
-    1: [[0, 1, 0, 0],
-        [0, 1, 0, 0],
-        [0, 1, 0, 0],
-        [0, 1, 0, 0]],
-
-    2: [[0, 0, 0, 0],
-        [0, 1, 1, 0],
-        [0, 1, 1, 0],
-        [0, 0, 0, 0]],
-
-    3: [[0, 0, 0, 0],
-        [0, 1, 1, 0],
-        [0, 1, 0, 0],
-        [0, 1, 0, 0]],
-
-    4: [[0, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 1, 1, 0],
-        [0, 1, 0, 0]],
-
-    5: [[0, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 1, 1, 0],
-        [0, 0, 1, 0]]
-
-}
-
 
 class Board:
-    # создание поля
+    # создание поля1
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.board = [[0] * width for _ in range(height)]
         # значения по умолчанию
         self.left = 50
         self.top = 25
         self.cell_size = 50
-
-    # настройка внешнего вида
-    def set_view(self, left, top, cell_size):
-        self.left = left
-        self.top = top
-        self.cell_size = cell_size
 
     def render(self, screen):
         for i in range(self.width):
@@ -56,41 +21,86 @@ class Board:
                                                            self.top + j * self.cell_size,
                                                            self.cell_size,
                                                            self.cell_size), 1)
+        pygame.draw.rect(screen, (0, 0, 0), (0, 0, self.width, 25))
+        pygame.draw.rect(screen, (0, 0, 0), (0, self.height - 25, self.width, 25))
 
 
 class Shape(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__(all_sprites)
         self.shape = random.randint(1, 5)
-        self.image = load_image(f"{self.shape}.png")
-        if self.shape == 1:
-            self.image = pygame.transform.scale(self.image, (48, 198))
-        elif self.shape == 2:
-            self.image = pygame.transform.scale(self.image, (98, 98))
-        else:
-            self.image = pygame.transform.scale(self.image, (98, 148))
+        self.image = load_image(f"{self.shape}.png", colorkey=(255, 255, 255))
+        # if self.shape == 1:
+        #     self.image = pygame.transform.scale(self.image, (48, 198))
+        # elif self.shape == 2:
+        #     self.image = pygame.transform.scale(self.image, (98, 98))
+        # else:
+        #     self.image = pygame.transform.scale(self.image, (98, 148))
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x = random.randint(1, 7) * 50
-        self.rect.y = -100
+        self.rect.y = 10
+        self.filled = []
 
-    def move(self, key):
+    def move(self, key):  # Фигура налезает на фигуру!!!!
+        t = True
         if self.rect.y != 625 - self.rect.size[1]:
             if key == pygame.K_LEFT:
                 if 50 != self.rect.x:
-                    self.rect = self.rect.move(-50, 0)
+                    for i in calm_shapes:
+                        if self.rect.y + self.rect.size[1] in [_ for _ in range(i.rect.y, i.rect.y + i.rect.size[1])] \
+                                and self.rect.x - i.rect.x - i.rect.size[0] <= 50:
+                            t = False
+                    if t:
+                        self.rect = self.rect.move(-50, 0)
             else:
                 if self.rect.x + self.rect.size[0] < 400:
-                    self.rect = self.rect.move(50, 0)
+                    for i in calm_shapes:
+                        # print(self.rect.x - i.rect.x - i.rect.size[0])
+                        if self.rect.y + self.rect.size[1] in [_ for _ in range(i.rect.y, i.rect.y + i.rect.size[1])] \
+                                and i.rect.x - self.rect.x - self.rect.size[0] <= 50:
+                            t = False
+                    if t:
+                        self.rect = self.rect.move(50, 0)
+
+    def update_last_row(self):
+        # x = [i.rect.x for i in calm_shapes]
+        # y = [i.rect.y for i in calm_shapes]
+        # size = [i.rect.size for i in calm_shapes]
+        # check_line = []
+        # for i in range(len(y)):
+        #     if y[i] + size[i][1] > 575:
+        #         for j in range(x[i], x[i] + size[i][0]):
+        #             check_line.append(j)
+        # # print(check_line)
+        # full = len(set([_ for _ in range(50, 451)]) - set(check_line))
+        # # print(full)
+        # if full < 50:
+        #     for shape in calm_shapes:
+        #         shape.rect.y += 50
+        test = 0
+        for i in range(50, 451):
+            if screen.get_at((i, 620)) != (0, 0, 0, 255):
+                test += 1
+        if test > 350:
+            for shape in calm_shapes:
+                shape.rect.y += 50
+
 
     def turn(self):
-        current_x = self.rect.x
-        current_y = self.rect.y
-        self.image = pygame.transform.rotate(self.image, 90)
-        self.rect = self.image.get_rect()
-        self.rect.y = current_y
-        self.rect.x = current_x
-        self.mask = pygame.mask.from_surface(self.image)
+        t = True
+        if self.rect.x + self.rect.size[1] <= 475 and self.rect.y + self.rect.size[0] <= 600:
+            # for i in calm_shapes:
+            #     if self.rect.x + self.rect.size[1] >= i.rect.x and self.rect.y - i.rect.y < 50:
+            #         t = False
+            # if t:
+            current_x = self.rect.x
+            current_y = self.rect.y
+            self.image = pygame.transform.rotate(self.image, 90)
+            self.rect = self.image.get_rect()
+            self.rect.y = current_y
+            self.rect.x = current_x
+            self.mask = pygame.mask.from_surface(self.image)
 
     def update(self):
         global main_shape
@@ -101,6 +111,8 @@ class Shape(pygame.sprite.Sprite):
         elif self.rect.y == 625 - self.rect.size[1] or \
                 any([pygame.sprite.collide_mask(self, shape) for shape in calm_shapes]):
             self.add(calm_shapes)
+            if self.rect.y == 625 - self.rect.size[1]:
+                self.update_last_row()
             main_shape = Shape()
 
 
@@ -145,10 +157,10 @@ if __name__ == '__main__':
     horizontal_borders = pygame.sprite.Group()
     vertical_borders = pygame.sprite.Group()
 
-    # Border(5, 5, width - 5, 5) вепхняя граница
+    Border(5, 5, width - 5, 5) #вепхняя граница
     Border(50, height - 25, width - 50, height - 25)
-    Border(50, 25, 50, height - 25)
-    Border(width - 50, 25, width - 50, height - 25)
+    Border(49, 25, 50, height - 25) # левая граница
+    Border(width - 50, 25, width - 50, height - 25) # правая граница
 
     board = Board(8, 12)
     running = True
@@ -160,6 +172,8 @@ if __name__ == '__main__':
     main_shape = Shape()
 
     while running:
+        pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(0, 625, 500, 650))
+        pygame.display.flip()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -172,5 +186,4 @@ if __name__ == '__main__':
         all_sprites.draw(screen)
         main_shape.update()
         board.render(screen)
-        pygame.display.flip()
-        clock.tick(180)
+        clock.tick(200)
