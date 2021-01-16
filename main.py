@@ -9,86 +9,65 @@ class Board:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        # значения по умолчанию
         self.left = 50
         self.top = 25
         self.cell_size = 50
 
     def render(self, screen):
+        pygame.draw.rect(screen, (0, 0, 0), (50, 0, self.width * self.cell_size, 25))
+        pygame.draw.rect(screen, (0, 0, 0), (50, (self.height * self.cell_size) + 25, self.width * self.cell_size, 25))
         for i in range(self.width):
             for j in range(self.height):
                 pygame.draw.rect(screen, (255, 255, 255), (self.left + i * self.cell_size,
                                                            self.top + j * self.cell_size,
                                                            self.cell_size,
                                                            self.cell_size), 1)
-        pygame.draw.rect(screen, (0, 0, 0), (0, 0, self.width, 25))
-        pygame.draw.rect(screen, (0, 0, 0), (0, self.height - 25, self.width, 25))
 
 
 class Shape(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__(all_sprites)
-        self.shape = random.randint(1, 5)
+        global next_shape
+        self.shape = next_shape
+        next_shape = random.randint(1, 5)
         self.image = load_image(f"{self.shape}.png", colorkey=(255, 255, 255))
-        # if self.shape == 1:
-        #     self.image = pygame.transform.scale(self.image, (48, 198))
-        # elif self.shape == 2:
-        #     self.image = pygame.transform.scale(self.image, (98, 98))
-        # else:
-        #     self.image = pygame.transform.scale(self.image, (98, 148))
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(self.image)
-        self.rect.x = random.randint(1, 7) * 50
+        self.rect.x = (random.randint(1, 7) * 50) + 2
         self.rect.y = 10
         self.filled = []
 
-    def move(self, key):  # Фигура налезает на фигуру!!!!
+    def move(self, key):
         t = True
         if self.rect.y != 625 - self.rect.size[1]:
             if key == pygame.K_LEFT:
-                if 50 != self.rect.x:
+                if 52 != self.rect.x:
                     self.rect.x -= 50
                     if any([pygame.sprite.collide_mask(self, shape) for shape in calm_shapes]):
                         self.rect.x += 50
-            else:
-                if self.rect.x + self.rect.size[0] < 400:
+            elif key == pygame.K_RIGHT:
+                if self.rect.x + self.rect.size[0] < 403:
                     self.rect.x += 50
                     if any([pygame.sprite.collide_mask(self, shape) for shape in calm_shapes]):
                         self.rect.x -= 50
 
+
     def update_last_row(self):
         global score
-        # x = [i.rect.x for i in calm_shapes]
-        # y = [i.rect.y for i in calm_shapes]
-        # size = [i.rect.size for i in calm_shapes]
-        # check_line = []
-        # for i in range(len(y)):
-        #     if y[i] + size[i][1] > 575:
-        #         for j in range(x[i], x[i] + size[i][0]):
-        #             check_line.append(j)
-        # # print(check_line)
-        # full = len(set([_ for _ in range(50, 451)]) - set(check_line))
-        # # print(full)
-        # if full < 50:
-        #     for shape in calm_shapes:
-        #         shape.rect.y += 50
         for j in range(4):
             test = 0
             for i in range(50, 451):
                 if screen.get_at((i, 620 - j * 50)) != (0, 0, 0, 255):
                     test += 1
-            if test > 350: # 330 потому что в фигурах много черного пространства
+            if test > 370:
                 score += 1
                 for shape in calm_shapes:
                     shape.rect.y += 50
+            else:
+                break
 
-
-    def turn(self): #не всегда поворачивается!!!
+    def turn(self):
         if self.rect.x + self.rect.size[1] <= 475 and self.rect.y + self.rect.size[0] <= 600:
-            # for i in calm_shapes:
-            #     if self.rect.x + self.rect.size[1] >= i.rect.x and self.rect.y - i.rect.y < 50:
-            #         t = False
-            # if t:
             current_x = self.rect.x
             current_y = self.rect.y
             self.image = pygame.transform.rotate(self.image, 90)
@@ -104,11 +83,18 @@ class Shape(pygame.sprite.Sprite):
                 self.mask = pygame.mask.from_surface(self.image)
 
     def update(self):
+        global record
         global main_shape
+        global end_game
         if any([pygame.sprite.collide_mask(self, border) for border in horizontal_borders]) \
                 and any([pygame.sprite.collide_mask(self, shape) for shape in calm_shapes]):
-            terminate()
-            end_screen()
+            if score > record:
+                record = score
+                f = open("data/record.txt", 'w')
+                print(f.write(f"{score}"))
+                f.close()
+                new_record = True
+            end_game = True
         else:
             if self.rect.y < 625 - self.rect.size[1] and \
                     not any([pygame.sprite.collide_mask(self, shape) for shape in calm_shapes]):
@@ -122,6 +108,28 @@ class Shape(pygame.sprite.Sprite):
                 main_shape = Shape()
 
 
+class Particle(pygame.sprite.Sprite):
+    def __init__(self, pos, dx, dy):
+        super().__init__(stars)
+        self.fire = [load_image("star.png")]
+        for scale in (5, 10, 20):
+            self.fire.append(pygame.transform.scale(self.fire[0], (scale, scale)))
+
+        self.image = random.choice(self.fire)
+        self.rect = self.image.get_rect()
+        self.velocity = [dx, dy]
+        self.rect.x, self.rect.y = pos
+        self.gravity = 0
+        while self.gravity == 0:
+            self.gravity = random.randint(-2, 2)
+
+    def update(self):
+        self.velocity[1] += self.gravity
+        self.rect.x += self.velocity[0]
+        self.rect.y += self.velocity[1]
+        if not self.rect.colliderect(screen_rect):
+            self.kill()
+
 
 class Border(pygame.sprite.Sprite):
     # строго вертикальный или строго горизонтальный отрезок
@@ -130,12 +138,11 @@ class Border(pygame.sprite.Sprite):
         if x1 == x2:  # вертикальная стенка
             self.add(vertical_borders)
             self.image = pygame.Surface([1, y2 - y1])
-            self.rect = pygame.Rect(x1, y1, 1, y2 - y1, )
+            self.rect = pygame.Rect(x1, y1, 1, y2 - y1)
         else:  # горизонтальная стенка
             self.add(horizontal_borders)
             self.image = pygame.Surface([x2 - x1, 1])
             self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
-
 
 
 def load_image(name, colorkey=None):
@@ -154,73 +161,115 @@ def load_image(name, colorkey=None):
         image = image.convert_alpha()
     return image
 
+
 def terminate():
     pygame.quit()
     sys.exit()
 
+
+def next_shape_view():
+    next_img = load_image(f"{next_shape}.png", colorkey=(255, 255, 255))
+    next_rect = next_img.get_rect()
+    next_rect.x = 465
+    next_rect.y = 400
+    next_img = pygame.transform.scale(next_img, (next_rect.size[0] // 2, next_rect.size[1] // 2))
+    screen.blit(next_img, next_rect)
+
+
+def create_particles(position):
+    particle_count = 10
+    numbers = range(-5, 6)
+    for _ in range(particle_count):
+        Particle(position, random.choice(numbers), random.choice(numbers))
+
+
 def end_screen():
-    pass
-    # intro_text = ["ЗАСТАВКА", "",
-    #               "Правила игры",
-    #               "Если в правилах несколько строк,",
-    #               "приходится выводить их построчно"]
-    # fon = pygame.transform.scale(load_image('end.jpg'), (600, 650))
-    # # screen.fill((0,0,0))
-    # screen.blit(fon, (0, 0))
-    # font = pygame.font.Font(None, 30)
-    # text_coord = 50
-    # for line in intro_text:
-    #     string_rendered = font.render(line, 1, pygame.Color('red'))
-    #     intro_rect = string_rendered.get_rect()
-    #     text_coord += 10
-    #     intro_rect.top = text_coord
-    #     intro_rect.x = 10
-    #     text_coord += intro_rect.height
-    #     screen.blit(string_rendered, intro_rect)
+    global screen
+    fon = pygame.transform.scale(load_image('end.jpg'), (600, 650))
+    rec = pygame.font.Font(None, 50)
+    rec = rec.render(f'Record: {record}', True, (180, 0, 0))
+    new_rec = pygame.font.Font(None, 90)
+    new_rec = new_rec.render(f'New Record', True, (180, 0, 0))
+    res = pygame.font.Font(None, 40)
+    res = res.render(f'Score: {score}', True,
+                     (180, 0, 0))
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+        if new_record:
+            create_particles((90, 450))
+            create_particles((510, 450))
+            screen.blit(new_rec, (140, 420))
+        stars.update()
+        screen.fill((0, 0, 0))
+        screen.blit(fon, (0, 0))
+        screen.blit(res, (250, 330))
+        screen.blit(rec, (230, 360))
+        stars.draw(screen)
+        pygame.display.flip()
+        clock.tick(100)
+
 
 if __name__ == '__main__':
     pygame.init()
     pygame.display.set_caption('тетрис')
     size = width, height = 600, 650
     all_sprites = pygame.sprite.Group()
+    stars = pygame.sprite.Group()
     calm_shapes = pygame.sprite.Group()
     screen = pygame.display.set_mode(size)
     horizontal_borders = pygame.sprite.Group()
     vertical_borders = pygame.sprite.Group()
     score = 0
-    Border(5, 25, width - 5, 5) #вепхняя граница
+    end_game = False
+    screen_rect = (0, 0, width, height)
+    Border(5, 25, width - 5, 5)  # верхняя граница
     Border(50, height - 25, width - 50, height - 25)
-    Border(49, 25, 50, height - 25) # левая граница
-    Border(width - 50, 25, width - 50, height - 25) # правая граница
+    Border(49, 25, 50, height - 25)  # левая граница
+    Border(width - 250, 25, width - 250, height - 25)  # правая граница
 
     board = Board(8, 12)
     running = True
 
-    MYEVENTTYPE = pygame.USEREVENT + 1
-    pygame.time.set_timer(MYEVENTTYPE, 1000)
     clock = pygame.time.Clock()
 
+    next_shape = random.randint(1, 5)
+    next_img = load_image(f"{next_shape}.png", colorkey=(255, 255, 255))
+    next_rect = next_img.get_rect()
+    next_rect.x = 465
+    next_rect.y = 400
+    f = open("data/record.txt", encoding="utf8")
+    record = int(f.read(3))
+    f.close()
+    new_record = False
     main_shape = Shape()
 
     while running:
-        pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(0, 625, 500, 650))
-        f1 = pygame.font.Font(None, 36)
-        text1 = f1.render(f'Score: {score}', True,
-                          (180, 0, 0))
-        screen.blit(text1, (475, 525))
-        pygame.display.flip()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key in [pygame.K_LEFT, pygame.K_RIGHT]:
-                    main_shape.move(event.key)
-                if event.key == pygame.K_UP:
-                    main_shape.turn()
-        screen.fill((0, 0, 0))
-        all_sprites.draw(screen)
-        main_shape.update()
-        board.render(screen)
-        clock.tick(200)
+        if end_game:
+            end_screen()
+        else:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key in [pygame.K_LEFT, pygame.K_RIGHT]:
+                        main_shape.move(event.key)
+                    if event.key == pygame.K_UP:
+                        main_shape.turn()
 
-#to do
+            screen.fill((0, 0, 0))
+            pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(0, 625, 500, 650))
+            f1 = pygame.font.Font(None, 36)
+            text1 = f1.render(f'Score: {score}', True,
+                              (180, 0, 0))
+            text2 = f1.render(f'Next shape:', True, (180, 0, 0))
+            screen.blit(text1, (475, 525))
+            screen.blit(text2, (455, 375))
+            next_shape_view()
+            all_sprites.draw(screen)
+            main_shape.update()
+            board.render(screen)
+        pygame.display.flip()
+        clock.tick(150)
