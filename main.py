@@ -5,7 +5,6 @@ import pygame
 
 
 class Board:
-    # создание поля1
     def __init__(self, width, height):
         self.width = width
         self.height = height
@@ -51,7 +50,6 @@ class Shape(pygame.sprite.Sprite):
                     if any([pygame.sprite.collide_mask(self, shape) for shape in calm_shapes]):
                         self.rect.x -= 50
 
-
     def update_last_row(self):
         global score
         for j in range(4):
@@ -83,6 +81,7 @@ class Shape(pygame.sprite.Sprite):
                 self.mask = pygame.mask.from_surface(self.image)
 
     def update(self):
+        global new_record
         global record
         global main_shape
         global end_game
@@ -91,7 +90,7 @@ class Shape(pygame.sprite.Sprite):
             if score > record:
                 record = score
                 f = open("data/record.txt", 'w')
-                print(f.write(f"{score}"))
+                f.write(f"{score}")
                 f.close()
                 new_record = True
             end_game = True
@@ -234,7 +233,9 @@ if __name__ == '__main__':
     running = True
 
     clock = pygame.time.Clock()
-
+    fps = 100
+    counter = 10
+    pygame.time.set_timer(pygame.USEREVENT, 1000)
     next_shape = random.randint(1, 5)
     next_img = load_image(f"{next_shape}.png", colorkey=(255, 255, 255))
     next_rect = next_img.get_rect()
@@ -258,7 +259,11 @@ if __name__ == '__main__':
                         main_shape.move(event.key)
                     if event.key == pygame.K_UP:
                         main_shape.turn()
-
+                if event.type == pygame.USEREVENT:
+                    counter -= 1
+                    if counter == 0:
+                        fps += 20
+                        counter = 10
             screen.fill((0, 0, 0))
             pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(0, 625, 500, 650))
             f1 = pygame.font.Font(None, 36)
@@ -272,4 +277,4 @@ if __name__ == '__main__':
             main_shape.update()
             board.render(screen)
         pygame.display.flip()
-        clock.tick(150)
+        clock.tick(fps)
