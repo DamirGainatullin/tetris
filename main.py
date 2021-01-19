@@ -12,7 +12,7 @@ class Board:
         self.top = 25
         self.cell_size = 50
 
-    def render(self, screen):
+    def render(self, screen):  # Вывод клетчатого поля на экран
         pygame.draw.rect(screen, (0, 0, 0), (50, 0, self.width * self.cell_size, 25))
         pygame.draw.rect(screen, (0, 0, 0), (50, (self.height * self.cell_size) + 25, self.width * self.cell_size, 25))
         for i in range(self.width):
@@ -37,20 +37,21 @@ class Shape(pygame.sprite.Sprite):
         self.filled = []
 
     def move(self, key):
-        t = True
         if self.rect.y != 625 - self.rect.size[1]:
             if key == pygame.K_LEFT:
                 if 52 != self.rect.x:
                     self.rect.x -= 50
-                    if any([pygame.sprite.collide_mask(self, shape) for shape in calm_shapes]):
+                    if any([pygame.sprite.collide_mask(self, shape) for shape in
+                            calm_shapes]):  # Если есть касание с какой либо упавшей фигурой то возвращает фигуру на место
                         self.rect.x += 50
             elif key == pygame.K_RIGHT:
                 if self.rect.x + self.rect.size[0] < 403:
                     self.rect.x += 50
-                    if any([pygame.sprite.collide_mask(self, shape) for shape in calm_shapes]):
+                    if any([pygame.sprite.collide_mask(self, shape) for shape in
+                            calm_shapes]):  # Если есть касание с какой либо упавшей фигурой то возвращает фигуру на место
                         self.rect.x -= 50
 
-    def update_last_row(self):
+    def update_last_row(self):  # Проверка заполнености нижних рядов
         global score
         for j in range(4):
             test = 0
@@ -59,7 +60,7 @@ class Shape(pygame.sprite.Sprite):
                     test += 1
             if test > 370:
                 score += 1
-                for shape in calm_shapes:
+                for shape in calm_shapes:  # При заполнении ряда все фигуры спускаются на 1 клетку вниз
                     shape.rect.y += 50
             else:
                 break
@@ -73,7 +74,8 @@ class Shape(pygame.sprite.Sprite):
             self.rect.y = current_y
             self.rect.x = current_x
             self.mask = pygame.mask.from_surface(self.image)
-            if any([pygame.sprite.collide_mask(self, shape) for shape in calm_shapes]):
+            if any([pygame.sprite.collide_mask(self, shape) for shape in
+                    calm_shapes]):  # Если есть касание с какой либо упавшей фигурой то возвращает фигуру на место
                 self.image = pygame.transform.rotate(self.image, -90)
                 self.rect = self.image.get_rect()
                 self.rect.y = current_y
@@ -107,7 +109,7 @@ class Shape(pygame.sprite.Sprite):
                 main_shape = Shape()
 
 
-class Particle(pygame.sprite.Sprite):
+class Particle(pygame.sprite.Sprite):  # Класс звездочек при установлении нового реокрда
     def __init__(self, pos, dx, dy):
         super().__init__(stars)
         self.fire = [load_image("star.png")]
@@ -131,7 +133,6 @@ class Particle(pygame.sprite.Sprite):
 
 
 class Border(pygame.sprite.Sprite):
-    # строго вертикальный или строго горизонтальный отрезок
     def __init__(self, x1, y1, x2, y2):
         super().__init__(all_sprites)
         if x1 == x2:  # вертикальная стенка
@@ -183,6 +184,7 @@ def create_particles(position):
 
 
 def end_screen():
+    # Экран окончания игры
     global screen
     fon = pygame.transform.scale(load_image('end.jpg'), (600, 650))
     rec = pygame.font.Font(None, 50)
@@ -266,6 +268,7 @@ if __name__ == '__main__':
                         counter = 10
             screen.fill((0, 0, 0))
             pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(0, 625, 500, 650))
+            # Прямоугольник который закрывает фигуры упавшие на клетку вниз при заполнении ряда
             f1 = pygame.font.Font(None, 36)
             text1 = f1.render(f'Score: {score}', True,
                               (180, 0, 0))
